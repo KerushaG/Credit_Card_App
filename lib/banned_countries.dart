@@ -27,7 +27,7 @@ class _BannedCountriesState extends State<BannedCountries> {
 
   void createOpenBox() async {
     box_countries = await Hive.openBox('banned_countries');
-    await box_countries.clear();
+    //await box_countries.clear();
     _refreshItems();
   }
 

@@ -29,7 +29,7 @@ class SignUpPage extends State<SignUp> {
   void createOpenBox()async{
 
     box_users = await Hive.openBox('users');
-    //await box_users.clear();
+    await box_users.clear();
     //getData();
 
   }
@@ -37,9 +37,8 @@ class SignUpPage extends State<SignUp> {
   void saveData()async {
 
     box_users = await Hive.openBox('users');
-    box_users.put(usernameController.value.text,usernameController.value.text);
-    box_users.put(emailController.value.text,emailController.value.text);
-    box_users.put(passwordController.value.text, passwordController.value.text);
+    box_users.add(key: ''; usernameController.value.text; emailController.value.text; passwordController.value.text);
+
 
     //await box_users.close();
   }

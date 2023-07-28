@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'banned_countries.dart';
+import 'add_creditcard.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -28,7 +29,12 @@ class HomePage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 child: ElevatedButton(
                   onPressed: () {
-
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddNewCard(),
+                      ),
+                    );
                   },
                   child: const Text("Add Card"),
                 ),

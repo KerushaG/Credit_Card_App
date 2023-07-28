@@ -1,39 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:country_provider2/country_provider2.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-class AddNewCardScreen extends StatefulWidget {
-  const AddNewCardScreen({Key? key}) : super(key: key);
+class AddNewCard extends StatefulWidget {
+  const AddNewCard({Key? key}) : super(key: key);
 
   @override
-  State<AddNewCardScreen> createState() => _AddNewCardScreenState();
+  State<AddNewCard> createState() => AddNewCardPage();
 }
 
-class _AddNewCardScreenState extends State<AddNewCardScreen> {
+class AddNewCardPage extends State<AddNewCard> {
   TextEditingController cardNumberController = TextEditingController();
+  TextEditingController cardTypeController = TextEditingController();
+  TextEditingController cardCVVController = TextEditingController();
+  TextEditingController cardExpiryController = TextEditingController();
+  TextEditingController cardCountryController = TextEditingController();
 
   CardType cardType = CardType.Invalid;
+  List<String> _kOptions = [];
 
   void getCardTypeFrmNum() {
     if (cardNumberController.text.length <= 6) {
       String cardNum = CardUtils.getCleanedNumber(cardNumberController.text);
       CardType type = CardUtils.getCardTypeFrmNumber(cardNum);
-      if(type != cardType) {
-        setState (() {
+      if (type != cardType) {
+        setState(() {
           cardType = type;
+          cardTypeController.text = cardTypeToString(type); // Update the text property
         });
       }
     }
   }
 
+  // Utility method to convert CardType enum to String
+  String cardTypeToString(CardType type) {
+    switch (type) {
+      case CardType.Master:
+        return 'Mastercard';
+      case CardType.Visa:
+        return 'Visa';
+      case CardType.Verve:
+        return 'Verve';
+      case CardType.AmericanExpress:
+        return 'American Express';
+      case CardType.Discover:
+        return 'Discover';
+      case CardType.DinersClub:
+        return 'Diners Club';
+      case CardType.Jcb:
+        return 'JCB';
+      case CardType.Others:
+      default:
+        return 'Unknown';
+    }
+  }
+
+
   @override
   void initState() {
-    cardNumberController.addListener(() {
-      getCardTypeFrmNum();
-    },);
-    super.initState();
+    // Other code...
+    _fetchCountryNames().then((countryNames) {
+      setState(() {
+        _kOptions = countryNames;
+      });
+    }).catchError((error) {
+      print('Error fetching country names: $error');
+      // Provide a default list of country names in case of an error
+      setState(() {
+        _kOptions = ['Country 1', 'Country 2', 'Country 3']; // Add more countries if needed
+      });
+    });
+    // Other code...
   }
+
+
 
   @override
   void dispose() {
@@ -41,63 +83,187 @@ class _AddNewCardScreenState extends State<AddNewCardScreen> {
     super.dispose();
   }
 
+  /*static const List<String> _kOptions = <String>[
+    'aardvark',
+    'bobcat',
+    'chameleon',
+  ];*/
+
+  Future<List<String>> _fetchCountryNames() async {
+    List<String> countryNames = [];
+    CountryProvider countryProvider = CountryProvider();
+    try {
+      List<Country>? countries = await countryProvider.getCountriesByName('');
+      if (countries != null) {
+        for (var country in countries) {
+          countryNames.add(country.name ?? ''); // Provide a default value if null
+        }
+      }
+    } catch (error) {
+      print('Error fetching country names: $error');
+    }
+    return countryNames;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("New card")),
+      appBar: AppBar(title: const Text("Credit Card Submissions")),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
+                child: Text(
+                  'Add New Card',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    // Customize the content text style if needed
+                  ),
+                ),
+              ),
               Form(
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: cardNumberController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(19),
-                        CardNumberInputFormatter(),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: "Card Number",
-                        border: OutlineInputBorder(),
-                        //suffix: CardUtils.getCardTypeDescription(cardType),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 35, 10, 0),
+                      child: TextFormField(
+                        controller: cardNumberController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(19),
+                          CardNumberInputFormatter(),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: "Card Number",
+                          border: OutlineInputBorder(),
+                          //suffix: CardUtils.getCardTypeDescription(cardType),
+                        ),
                       ),
-
                     ),
-                    TextField(
-                      readOnly: true,
-
-                      decoration: const InputDecoration(
-                        labelText: 'Card Type',
-                        border: OutlineInputBorder(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child: TextFormField(
+                        controller: cardTypeController,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Card Type',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: cardCVVController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                // Limit the input
+                                LengthLimitingTextInputFormatter(4),
+                              ],
+                              decoration: const InputDecoration(hintText: "CVV"),
+                            ),
+                          ),
+                          SizedBox(width: 10), // Add some spacing between the CVV and Expiry fields
+                          Expanded(
+                            child: TextFormField(
+                              controller: cardExpiryController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(5),
+                              ],
+                              decoration: const InputDecoration(hintText: "MM/YY"),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child: TextField(
+                        controller: cardCountryController,
+                        decoration: const InputDecoration(
+                          labelText: 'Issuing Country',
+                          border: OutlineInputBorder(),
+                        ),
+                        // Disable text field editing
+                        enabled: true,
+                        // Show the autocomplete suggestions as a dropdown menu
+                        // when the user taps the text field
+                        onTap: () {
+                          showAutocomplete(context);
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 20), // Add some spacing between the fields and buttons
+                    Center(
+                      child: Container(
+                        width: 350,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Handle the form submission here
+                          },
+                          child: const Text('Submit'),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10), // Add some spacing between the buttons
+                    Center(
+                      child: Container(
+                        width: 350,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Cancel'),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(flex: 2),
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: ElevatedButton(
-                  child: const Text("Submit"),
-                  onPressed: () {},
-                ),
-              ),
-              const Spacer(),
             ],
           ),
         ),
       ),
     );
   }
+
+  void showAutocomplete(BuildContext context) async {
+    final selectedCountry = await showSearch<String>(
+      context: context,
+      delegate: _CountrySearchDelegate(_kOptions),
+    );
+
+    if (selectedCountry != null) {
+      setState(() {
+        cardCountryController.text = selectedCountry;
+      });
+    }
+  }
+
+
+
 }
 
+//ALLOW SPACES WHEN USER ENTERS CARD NO
 class CardNumberInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -132,6 +298,7 @@ enum CardType {
   Others,
   Invalid
 }
+
 class CardUtils {
 
   static CardType getCardTypeFrmNumber(String input) {
@@ -164,7 +331,7 @@ class CardUtils {
     return text.replaceAll(regExp, '');
   }
 
-  static String getCardTypeDescription(CardType? cardType) {
+   String getCardTypeDescription(CardType cardType) {
     String creditcardtyperesult = "";
     switch (cardType) {
       case CardType.Master:
@@ -199,3 +366,66 @@ class CardUtils {
     return creditcardtyperesult;
   }
 }
+
+class _CountrySearchDelegate extends SearchDelegate<String> {
+  final List<String> countryNames;
+
+  _CountrySearchDelegate(this.countryNames);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        onPressed: () {
+          query = '';
+        },
+        icon: Icon(Icons.clear),
+      )
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: () {
+        close(context, '');
+      },
+      icon: Icon(Icons.arrow_back),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults(query);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults(query);
+  }
+
+  Widget _buildSearchResults(String query) {
+    final List<String> matches = countryNames
+        .where((countryName) => countryName
+        .toLowerCase()
+        .contains(query.toLowerCase()))
+        .toList();
+
+    return ListView.builder(
+      itemCount: matches.length,
+      itemBuilder: (context, index) {
+        final countryName = matches[index];
+        return ListTile(
+          title: Text(countryName),
+          onTap: () {
+            close(context, countryName);
+          },
+        );
+      },
+    );
+  }
+}
+
+
+
+
