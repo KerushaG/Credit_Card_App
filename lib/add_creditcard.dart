@@ -19,7 +19,6 @@ class AddNewCardPage extends State<AddNewCard> {
   TextEditingController cardCountryController = TextEditingController();
 
   CardType cardType = CardType.Invalid;
-  List<String> _kOptions = [];
 
   void getCardTypeFrmNum() {
     if (cardNumberController.text.length <= 6) {
@@ -60,52 +59,14 @@ class AddNewCardPage extends State<AddNewCard> {
 
   @override
   void initState() {
-    // Other code...
-    _fetchCountryNames().then((countryNames) {
-      setState(() {
-        _kOptions = countryNames;
-      });
-    }).catchError((error) {
-      print('Error fetching country names: $error');
-      // Provide a default list of country names in case of an error
-      setState(() {
-        _kOptions = ['Country 1', 'Country 2', 'Country 3']; // Add more countries if needed
-      });
-    });
-    // Other code...
+
   }
-
-
 
   @override
   void dispose() {
     cardNumberController.dispose();
     super.dispose();
   }
-
-  /*static const List<String> _kOptions = <String>[
-    'aardvark',
-    'bobcat',
-    'chameleon',
-  ];*/
-
-  Future<List<String>> _fetchCountryNames() async {
-    List<String> countryNames = [];
-    CountryProvider countryProvider = CountryProvider();
-    try {
-      List<Country>? countries = await countryProvider.getCountriesByName('');
-      if (countries != null) {
-        for (var country in countries) {
-          countryNames.add(country.name ?? ''); // Provide a default value if null
-        }
-      }
-    } catch (error) {
-      print('Error fetching country names: $error');
-    }
-    return countryNames;
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +76,7 @@ class AddNewCardPage extends State<AddNewCard> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
+          child: ListView(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
@@ -193,24 +154,63 @@ class AddNewCardPage extends State<AddNewCard> {
                       ),
                     ),
                     SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                      child: TextField(
-                        controller: cardCountryController,
-                        decoration: const InputDecoration(
-                          labelText: 'Issuing Country',
-                          border: OutlineInputBorder(),
-                        ),
-                        // Disable text field editing
-                        enabled: true,
-                        // Show the autocomplete suggestions as a dropdown menu
-                        // when the user taps the text field
-                        onTap: () {
-                          showAutocomplete(context);
-                        },
-                      ),
+                    Autocomplete<Country>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        return countryOptions
+                            .where((Country continent) => continent.name.toLowerCase()
+                            .startsWith(textEditingValue.text.toLowerCase())
+                        )
+                            .toList();
+                      },
+                      displayStringForOption: (Country option) => option.name,
+                      fieldViewBuilder: (
+                          BuildContext context,
+                          TextEditingController countryController,
+                          FocusNode fieldFocusNode,
+                          VoidCallback onFieldSubmitted
+                          ) {
+                        return TextField(
+                          controller: countryController,
+                          decoration: const InputDecoration(hintText: "Issuing Country"),
+                          focusNode: fieldFocusNode,
+                        );
+                      },
+                      onSelected: (Country selection) {
+                        print('Selected: ${selection.name}');
+                      },
+                      optionsViewBuilder: (
+                          BuildContext context,
+                          AutocompleteOnSelected<Country> onSelected,
+                          Iterable<Country> options
+                          ) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            child: Container(
+                              width: 300,
+                              color: Colors.grey.shade100,
+                              child: ListView.builder(
+                                padding: EdgeInsets.all(10.0),
+                                itemCount: options.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final Country option = options.elementAt(index);
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      onSelected(option);
+                                    },
+                                    child: ListTile(
+                                      title: Text(option.name, style: const TextStyle(color: Colors.black)),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    SizedBox(height: 20), // Add some spacing between the fields and buttons
+                    SizedBox(height: 35), // Add some spacing between the fields and buttons
                     Center(
                       child: Container(
                         width: 350,
@@ -245,21 +245,6 @@ class AddNewCardPage extends State<AddNewCard> {
       ),
     );
   }
-
-  void showAutocomplete(BuildContext context) async {
-    final selectedCountry = await showSearch<String>(
-      context: context,
-      delegate: _CountrySearchDelegate(_kOptions),
-    );
-
-    if (selectedCountry != null) {
-      setState(() {
-        cardCountryController.text = selectedCountry;
-      });
-    }
-  }
-
-
 
 }
 
@@ -367,64 +352,198 @@ class CardUtils {
   }
 }
 
-class _CountrySearchDelegate extends SearchDelegate<String> {
-  final List<String> countryNames;
+class Country {
 
-  _CountrySearchDelegate(this.countryNames);
+  const Country({
+    required this.name
+  });
 
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        onPressed: () {
-          query = '';
-        },
-        icon: Icon(Icons.clear),
-      )
-    ];
-  }
+  final String name;
 
   @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      onPressed: () {
-        close(context, '');
-      },
-      icon: Icon(Icons.arrow_back),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return _buildSearchResults(query);
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return _buildSearchResults(query);
-  }
-
-  Widget _buildSearchResults(String query) {
-    final List<String> matches = countryNames
-        .where((countryName) => countryName
-        .toLowerCase()
-        .contains(query.toLowerCase()))
-        .toList();
-
-    return ListView.builder(
-      itemCount: matches.length,
-      itemBuilder: (context, index) {
-        final countryName = matches[index];
-        return ListTile(
-          title: Text(countryName),
-          onTap: () {
-            close(context, countryName);
-          },
-        );
-      },
-    );
+  String toString() {
+    return '$name()';
   }
 }
+
+const List<Country> countryOptions = <Country>[
+  Country(name: 'Algeria'),
+  Country(name: 'Angola'),
+  Country(name: 'Benin'),
+  Country(name: 'Botswana'),
+  Country(name: 'Burkina Faso'),
+  Country(name: 'Burundi'),
+  Country(name: 'Cabo Verde'),
+  Country(name: 'Cameroon'),
+  Country(name: 'Central African Republic'),
+  Country(name: 'Chad'),
+  Country(name: 'Comoros'),
+  Country(name: 'Congo (Brazzaville)'),
+  Country(name: 'Congo (Kinshasa)'),
+  Country(name: 'Cote d\'Ivoire\''),
+  Country(name: 'Djibouti'),
+  Country(name: 'Egypt'),
+  Country(name: 'Equatorial Guinea'),
+  Country(name: 'Eritrea'),
+  Country(name: 'Eswatini (formerly Swaziland)'),
+  Country(name: 'Ethiopia'),
+  Country(name: 'Gabon'),
+  Country(name: 'Gambia'),
+  Country(name: 'Ghana'),
+  Country(name: 'Guinea'),
+  Country(name: 'Guinea-Bissau'),
+  Country(name: 'Kenya'),
+  Country(name: 'Lesotho'),
+  Country(name: 'Liberia'),
+  Country(name: 'Libya'),
+  Country(name: 'Madagascar'),
+  Country(name: 'Malawi'),
+  Country(name: 'Mali'),
+  Country(name: 'Mauritania'),
+  Country(name: 'Mauritius'),
+  Country(name: 'Morocco'),
+  Country(name: 'Mozambique'),
+  Country(name: 'Namibia'),
+  Country(name: 'Niger'),
+  Country(name: 'Nigeria'),
+  Country(name: 'Rwanda'),
+  Country(name: 'Sao Tome and Principe'),
+  Country(name: 'Senegal'),
+  Country(name: 'Seychelles'),
+  Country(name: 'Sierra Leone'),
+  Country(name: 'Somalia'),
+  Country(name: 'South Africa'),
+  Country(name: 'South Sudan'),
+  Country(name: 'Sudan'),
+  Country(name: 'Tanzania'),
+  Country(name: 'Togo'),
+  Country(name: 'Tunisia'),
+  Country(name: 'Uganda'),
+  Country(name: 'Zambia'),
+  Country(name: 'Zimbabwe'),
+  Country(name: 'Afghanistan'),
+  Country(name: 'Armenia'),
+  Country(name: 'Azerbaijan'),
+  Country(name: 'Bahrain'),
+  Country(name: 'Bangladesh'),
+  Country(name: 'Bhutan'),
+  Country(name: 'Brunei'),
+  Country(name: 'Cambodia'),
+  Country(name: 'China'),
+  Country(name: 'Cyprus'),
+  Country(name: 'Georgia'),
+  Country(name: 'India'),
+  Country(name: 'Indonesia'),
+  Country(name: 'Iran'),
+  Country(name: 'Iraq'),
+  Country(name: 'Israel'),
+  Country(name: 'Japan'),
+  Country(name: 'Jordan'),
+  Country(name: 'Kazakhstan'),
+  Country(name: 'North Korea'),
+  Country(name: 'South Korea'),
+  Country(name: 'Kuwait'),
+  Country(name: 'Kyrgyzstan'),
+  Country(name: 'Laos'),
+  Country(name: 'Lebanon'),
+  Country(name: 'Malaysia'),
+  Country(name: 'Maldives'),
+  Country(name: 'Mongolia'),
+  Country(name: 'Myanmar (Burma)'),
+  Country(name: 'Nepal'),
+  Country(name: 'Oman'),
+  Country(name: 'Pakistan'),
+  Country(name: 'Palestine'),
+  Country(name: 'Philippines'),
+  Country(name: 'Qatar'),
+  Country(name: 'Saudi Arabia'),
+  Country(name: 'Singapore'),
+  Country(name: 'Sri Lanka'),
+  Country(name: 'Syria'),
+  Country(name: 'Tajikistan'),
+  Country(name: 'Thailand'),
+  Country(name: 'Timor-Leste'),
+  Country(name: 'Turkey'),
+  Country(name: 'Turkmenistan'),
+  Country(name: 'United Arab Emirates (UAE)'),
+  Country(name: 'Uzbekistan'),
+  Country(name: 'Vietnam'),
+  Country(name: 'Yemen'),
+  Country(name: 'Albania'),
+  Country(name: 'Andorra'),
+  Country(name: 'Austria'),
+  Country(name: 'Belarus'),
+  Country(name: 'Belgium'),
+  Country(name: 'Bosnia and Herzegovina'),
+  Country(name: 'Bulgaria'),
+  Country(name: 'Croatia'),
+  Country(name: 'Cyprus'),
+  Country(name: 'Czech Republic'),
+  Country(name: 'Denmark'),
+  Country(name: 'Estonia'),
+  Country(name: 'Finland'),
+  Country(name: 'France'),
+  Country(name: 'Germany'),
+  Country(name: 'Greece'),
+  Country(name: 'Hungary'),
+  Country(name: 'Iceland'),
+  Country(name: 'Ireland'),
+  Country(name: 'Italy'),
+  Country(name: 'Kosovo'),
+  Country(name: 'Latvia'),
+  Country(name: 'Liechtenstein'),
+  Country(name: 'Lithuania'),
+  Country(name: 'Luxembourg'),
+  Country(name: 'Malta'),
+  Country(name: 'Moldova'),
+  Country(name: 'Monaco'),
+  Country(name: 'Montenegro'),
+  Country(name: 'Netherlands'),
+  Country(name: 'North Macedonia'),
+  Country(name: 'Norway'),
+  Country(name: 'Poland'),
+  Country(name: 'Portugal'),
+  Country(name: 'Romania'),
+  Country(name: 'Russia'),
+  Country(name: 'San Marino'),
+  Country(name: 'Serbia'),
+  Country(name: 'Slovakia'),
+  Country(name: 'Slovenia'),
+  Country(name: 'Spain'),
+  Country(name: 'Sweden'),
+  Country(name: 'Switzerland'),
+  Country(name: 'Ukraine'),
+  Country(name: 'United Kingdom (UK)'),
+  Country(name: 'Mexico'),
+  Country(name: 'Canada'),
+  Country(name: 'United States of America (USA)'),
+  Country(name: 'Australia'),
+  Country(name: 'Fiji'),
+  Country(name: 'Kiribati'),
+  Country(name: 'Marshall Islands'),
+  Country(name: 'Micronesia'),
+  Country(name: 'Nauru'),
+  Country(name: 'New Zealand'),
+  Country(name: 'Palau'),
+  Country(name: 'Papua New Guinea'),
+  Country(name: 'Samoa'),
+  Country(name: 'Solomon Islands'),
+  Country(name: 'Tonga'),
+  Country(name: 'Tuvalu'),
+  Country(name: 'Vanuatu'),
+  Country(name: 'Argentina'),
+  Country(name: 'Bolivia'),
+  Country(name: 'Brazil'),
+  Country(name: 'Chile'),
+  Country(name: 'Colombia'),
+  Country(name: 'Ecuador'),
+  Country(name: 'Guyana'),
+  Country(name: 'Paraguay'),
+  Country(name: 'Peru'),
+  Country(name: 'Suriname'),
+  Country(name: 'Uruguay'),
+  Country(name: 'Venezuela'),
+];
 
 
 

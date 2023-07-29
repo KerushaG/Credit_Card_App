@@ -91,7 +91,7 @@ class HomePage extends StatelessWidget {
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () { Navigator.pop(context); },
                   child: const Text("Logout"),
                 ),
               ),
