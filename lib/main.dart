@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'registration.dart';
-import 'menu.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'registration.dart';
+import 'menu.dart';
 
 void main() async{
   await Hive.initFlutter();
@@ -22,7 +21,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: new ThemeData(scaffoldBackgroundColor: Colors.grey.shade50),
       home: const Login(title: 'Submit Credit Cards'),
-      );
+    );
   }
 }
 
@@ -37,7 +36,7 @@ class LoginPage extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   TextEditingController usernameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  late bool login_passed = false;
+  late bool login_passed;
   late Box box_users;
 
   @override
@@ -50,16 +49,23 @@ class LoginPage extends State<Login> {
 
     box_users = await Hive.openBox('users');
 
-    // Print the keys that match the search value REMOVE TRAILING SPACES
-    if (box_users.containsKey(usernameController.value.text) && box_users.containsKey(passwordController.value.text)) {
-      print('Value found!');
-      login_passed = true;
+    int totalValues = box_users.length;
+
+    // Print the total number of values
+    print('Total number of values in the box: $totalValues');
+    for (var key in box_users.keys) {
+      // Retrieve the value associated with the current key
+      var value = box_users.get(key);
+
+      // Print the key-value pair
+      print('$key: $value');
+
+      if(value['username'] == usernameController.text.trim() && value['password'] == passwordController.text.trim()) {
+        login_passed = true;
+        return;
+      }
     }
-    else {
-      // The value does not exist in the box
-      print('Value not found!');
-      login_passed = false;
-    }
+    login_passed = false;
     return;
   }
 
@@ -77,7 +83,7 @@ class LoginPage extends State<Login> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Padding (
-               padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
+                padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
                 child: Text('User Login', style: TextStyle(
                   color: Colors.black,
                   fontSize: 22,
@@ -170,4 +176,3 @@ class LoginPage extends State<Login> {
   }
 
 }
-

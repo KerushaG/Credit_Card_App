@@ -77,7 +77,6 @@ class _BannedCountriesState extends State<BannedCountries> {
 
   // TextFields' controllers
   final TextEditingController countryController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
 
   // This function will be triggered when the floating button is pressed
   // It will also be triggered when you want to update an item

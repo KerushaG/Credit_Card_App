@@ -8,25 +8,29 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Credit Card Submissions'),
-        ),
-        body: Column(
+      appBar: AppBar(
+        title: const Text('Credit Card Submissions'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
           children: [
-            Padding (
+            Padding(
               padding: const EdgeInsets.fromLTRB(10, 50, 10, 30),
-              child: Text('Menu Options', style: TextStyle(
-                color: Colors.black,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                // Customize the content text style if needed
-              ),),
+              child: Text(
+                'Menu Options',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  // Customize the content text style if needed
+                ),
+              ),
             ),
             Center(
-              child: Container (
-              width: 350,
-              height: 70,
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+              child: Container(
+                width: 350,
+                height: 70,
+                padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -41,20 +45,18 @@ class HomePage extends StatelessWidget {
               ),
             ),
             Center(
-              child: Container (
+              child: Container(
                 width: 350,
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {
-
-                  },
+                  onPressed: () {},
                   child: const Text("Scan Card"),
                 ),
               ),
             ),
             Center(
-              child: Container (
+              child: Container(
                 width: 350,
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
@@ -72,32 +74,30 @@ class HomePage extends StatelessWidget {
               ),
             ),
             Center(
-              child: Container (
+              child: Container(
                 width: 350,
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {
-
-                  },
+                  onPressed: () {},
                   child: const Text("View Credit Card Submissions"),
                 ),
               ),
             ),
             Center(
-              child: Container (
+              child: Container(
                 width: 350,
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {
-
-                  },
+                  onPressed: () {},
                   child: const Text("Logout"),
                 ),
               ),
             ),
           ],
-        ));
+        ),
+      ),
+    );
   }
 }

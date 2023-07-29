@@ -29,18 +29,27 @@ class SignUpPage extends State<SignUp> {
   void createOpenBox()async{
 
     box_users = await Hive.openBox('users');
-    await box_users.clear();
-    //getData();
+    //await box_users.clear();
+    getData();
 
   }
 
   void saveData()async {
 
     box_users = await Hive.openBox('users');
-    box_users.add(key: ''; usernameController.value.text; emailController.value.text; passwordController.value.text);
+    //box_users.add([usernameController.text, emailController.text, passwordController.text]);
+    //box_users.put(emailController.value.text,emailController.value.text);
+    //box_users.put(c, passwordController.value.text);
+    Map<String, dynamic> signupValues = {
+    // Adding multiple values to a key using a List
+    'username': usernameController.text.trim(),
+    'email': emailController.text.trim(),
+    'password': passwordController.text.trim()
+    };
 
+    box_users.add(signupValues);
 
-    //await box_users.close();
+    await box_users.close();
   }
 
   void getData()async {
@@ -54,11 +63,19 @@ class SignUpPage extends State<SignUp> {
 
       // Print the key-value pair
       print('$key: $value');
+
+      if(value['username'] == 'fdg' && value['password'] == 'bbb') {
+        print('almost there!!');
+        print(value['username']); // Output: 10
+        print(value['email']); // Output: 20
+        print(value['password']); // Output: 30
+        break;
+      }
+      else{ print('sorry kiddo, but dont give up we almost there, trust me!!');}
     }
     //WHEN YOU DON'T KNOW THE KEY, SEARCH BY VALUE
-   /* var keys = box_users.keys.toList();
+    /* var keys = box_users.keys.toList();
     var foundKeys = <String>[];
-
     for (var key in keys) {
       var value = box_users.get(key);
       if (value == '123') {
@@ -101,26 +118,31 @@ class SignUpPage extends State<SignUp> {
       ),
       body: Form(
         key: _formKey,
-        child: Padding(
+        child: SingleChildScrollView( // Wrap with SingleChildScrollView
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Padding (
+              Padding(
                 padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
-                child: Text('Sign Up', style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  // Customize the content text style if needed
-                ),),
+                child: Text(
+                  'Sign Up',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    // Customize the content text style if needed
+                  ),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 35, 10, 0),
                 child: TextFormField(
                   controller: usernameController,
                   decoration: const InputDecoration(
-                      border: OutlineInputBorder(), labelText: "Username"),
+                    border: OutlineInputBorder(),
+                    labelText: "Username",
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your Username';
@@ -134,7 +156,9 @@ class SignUpPage extends State<SignUp> {
                 child: TextFormField(
                   controller: emailController,
                   decoration: const InputDecoration(
-                      border: OutlineInputBorder(), labelText: "E-mail Address"),
+                    border: OutlineInputBorder(),
+                    labelText: "E-mail Address",
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your E-mail Address';
@@ -149,7 +173,9 @@ class SignUpPage extends State<SignUp> {
                   controller: passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(
-                      border: OutlineInputBorder(), labelText: "Password"),
+                    border: OutlineInputBorder(),
+                    labelText: "Password",
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your Password';
@@ -158,22 +184,24 @@ class SignUpPage extends State<SignUp> {
                   },
                 ),
               ),
-              Center (
-                child: Container (
+              Center(
+                child: Container(
                   width: 350,
                   height: 70,
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                   child: ElevatedButton(
                     onPressed: () {
-                      saveData();
-                      Navigator.pop(context);
+                      if (_formKey.currentState!.validate()) {
+                        saveData();
+                        Navigator.pop(context);
+                      }
                     },
                     child: const Text('Submit'),
                   ),
                 ),
               ),
-              Center (
-                child: Container (
+              Center(
+                child: Container(
                   width: 350, // Set your desired width here
                   height: 70,
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
@@ -191,4 +219,5 @@ class SignUpPage extends State<SignUp> {
       ),
     );
   }
+
 }
