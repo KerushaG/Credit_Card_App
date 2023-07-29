@@ -16,6 +16,7 @@ class BannedCountries extends StatefulWidget {
 class _BannedCountriesState extends State<BannedCountries> {
   List<Map<String, dynamic>> _items = [];
 
+  late int totalCountries;
   late Box box_countries;
 
   @override
@@ -27,7 +28,7 @@ class _BannedCountriesState extends State<BannedCountries> {
 
   void createOpenBox() async {
     box_countries = await Hive.openBox('banned_countries');
-    //await box_countries.clear();
+    //
     _refreshItems();
   }
 
@@ -44,7 +45,9 @@ class _BannedCountriesState extends State<BannedCountries> {
       // we use "reversed" to sort items in order from the latest to the oldest
     });
   }
-
+  int getTotalCountries() {
+    return _items.length;
+  }
   // Create new item
   Future<void> _createItem(Map<String, dynamic> newItem) async {
     await box_countries.add(newItem);
@@ -157,8 +160,7 @@ class _BannedCountriesState extends State<BannedCountries> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 25, 10, 30),
-            child: Text(
-              'Banned Countries',
+            child: Text('Banned Countries (${getTotalCountries()})', // Display the count in the title
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 22,

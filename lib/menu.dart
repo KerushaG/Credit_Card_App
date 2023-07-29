@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'banned_countries.dart';
 import 'add_creditcard.dart';
+import 'main.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -17,7 +18,7 @@ class HomePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 50, 10, 30),
               child: Text(
-                'Menu Options',
+                'Menu Options - Session: ' + sessionId.toString(),
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 22,

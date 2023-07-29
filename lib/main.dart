@@ -4,6 +4,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'registration.dart';
 import 'menu.dart';
 
+int? sessionId;
+
 void main() async{
   await Hive.initFlutter();
   runApp(const MyApp());
@@ -38,6 +40,7 @@ class LoginPage extends State<Login> {
   TextEditingController passwordController = TextEditingController();
   late bool login_passed;
   late Box box_users;
+  late Box box_session;
 
   @override
   void initState() {
@@ -45,7 +48,7 @@ class LoginPage extends State<Login> {
     super.initState();
   }
 
-  getData() async {
+  Future<int?> getData() async {
 
     box_users = await Hive.openBox('users');
 
@@ -62,12 +65,30 @@ class LoginPage extends State<Login> {
 
       if(value['username'] == usernameController.text.trim() && value['password'] == passwordController.text.trim()) {
         login_passed = true;
-        return;
+        //CREATE SESSION
+        print(key);
+        return key;
       }
     }
     login_passed = false;
-    return;
+    return null;
   }
+
+  Future<int> createSession(int userKey) async {
+    box_session = await Hive.openBox('sessions');
+    DateTime now = DateTime.now();
+
+    Map<String, dynamic> sessionValues = {
+      'userKey': userKey,
+      'dateTimeStarted': now.toString(),
+      'dateTimeEnded': '',
+    };
+
+    int key = await box_session.add(sessionValues);
+    await box_session.close();
+    return key;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -127,8 +148,9 @@ class LoginPage extends State<Login> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () async {
-                      await getData();
-                      if (login_passed) {
+                      int? userKey = await getData(); // Get the userKey from getData()
+                      if (login_passed && userKey != null) {
+                        sessionId = await createSession(userKey); // Assign sessionId here
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => HomePage()),
@@ -136,10 +158,13 @@ class LoginPage extends State<Login> {
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Invalid Credentials')),
+                            content: Text('Invalid Credentials'),
+                          ),
                         );
                       }
                     },
+
+
                     child: const Text('Login'),
                   ),
                 ),
@@ -172,7 +197,7 @@ class LoginPage extends State<Login> {
   @override
   void dispose() {
     box_users.close();
+    box_session.close();
     super.dispose();
   }
-
 }

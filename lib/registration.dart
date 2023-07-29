@@ -16,6 +16,7 @@ class SignUpPage extends State<SignUp> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController usernameController = TextEditingController();
+  late bool uniqueUser;
 
   late Box box_users;
 
@@ -27,19 +28,28 @@ class SignUpPage extends State<SignUp> {
   }
 
   void createOpenBox()async{
-
     box_users = await Hive.openBox('users');
-    //await box_users.clear();
-    getData();
-
   }
 
-  void saveData()async {
+  Future<bool> saveData() async {
 
     box_users = await Hive.openBox('users');
-    //box_users.add([usernameController.text, emailController.text, passwordController.text]);
-    //box_users.put(emailController.value.text,emailController.value.text);
-    //box_users.put(c, passwordController.value.text);
+
+    //VALIDATE FOR EXISTING USER
+    for (var key in box_users.keys) {
+      // Retrieve the value associated with the current key
+      var value = box_users.get(key);
+
+      // Print the key-value pair
+      print('$key: $value');
+
+      //CHECK FOR UNIQUE EMAIL AND PASSWORD
+      if(value['email'] == emailController.text.trim()) {
+        print('found a duplicate');
+        return false;
+      }
+    }
+
     Map<String, dynamic> signupValues = {
     // Adding multiple values to a key using a List
     'username': usernameController.text.trim(),
@@ -48,66 +58,8 @@ class SignUpPage extends State<SignUp> {
     };
 
     box_users.add(signupValues);
-
     await box_users.close();
-  }
-
-  void getData()async {
-    int totalValues = box_users.length;
-
-    // Print the total number of values
-    print('Total number of values in the box: $totalValues');
-    for (var key in box_users.keys) {
-      // Retrieve the value associated with the current key
-      var value = box_users.get(key);
-
-      // Print the key-value pair
-      print('$key: $value');
-
-      if(value['username'] == 'fdg' && value['password'] == 'bbb') {
-        print('almost there!!');
-        print(value['username']); // Output: 10
-        print(value['email']); // Output: 20
-        print(value['password']); // Output: 30
-        break;
-      }
-      else{ print('sorry kiddo, but dont give up we almost there, trust me!!');}
-    }
-    //WHEN YOU DON'T KNOW THE KEY, SEARCH BY VALUE
-    /* var keys = box_users.keys.toList();
-    var foundKeys = <String>[];
-    for (var key in keys) {
-      var value = box_users.get(key);
-      if (value == '123') {
-        foundKeys.add(key);
-      }
-    }*/
-
-    // Print the keys that match the search value
-    //print('Keys with matching value: $foundKeys');
-    /*if (box_users.containsKey('viri') && box_users.containsKey('vg')) {
-      // The value exists in the box
-      print('THERE IS A MATCH');
-    } else {
-      // The value does not exist in the box
-      print('Value not found!');
-    }
-    if(box_users.get('usernameController')!=null) {
-      emailController.text = box_users.get('usernameController');
-      setState(() {
-      });
-    }
-    if(box_users.get('emailController')!=null){
-      passwordController.text = box_users.get('emailController');
-      setState(() {
-      });
-    }
-    if(box_users.get('passwordController')!=null){
-      passwordController.text = box_users.get('passwordController');
-      setState(() {
-      });
-    }*/
-    await box_users.close();
+    return true;
   }
 
   @override
@@ -190,10 +142,18 @@ class SignUpPage extends State<SignUp> {
                   height: 70,
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        saveData();
-                        Navigator.pop(context);
+                        bool isSaved = await saveData();
+                        if (isSaved) {
+                          Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('A user already exists for the e-mail address you entered.'),
+                            ),
+                          );
+                        }
                       }
                     },
                     child: const Text('Submit'),
