@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'banned_countries.dart';
 import 'add_creditcard.dart';
 import 'main.dart';
+import 'view_creditcards.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -80,7 +81,13 @@ class HomePage extends StatelessWidget {
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ViewCreditCards(),
+                    ),
+                  );},
                   child: const Text("View Credit Card Submissions"),
                 ),
               ),

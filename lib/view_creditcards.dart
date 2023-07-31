@@ -1,102 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-
+import 'main.dart';
+import 'add_creditcard.dart';
 //ADD COUNT OF ITEMS
 //ADD ARE YOU SURE YOU WANNA DELETE IT
 
 // Home Page
-class BannedCountries extends StatefulWidget {
-  const BannedCountries({Key? key}) : super(key: key);
+class ViewCreditCards extends StatefulWidget {
+  const ViewCreditCards({Key? key}) : super(key: key);
 
   @override
-  State<BannedCountries> createState() => _BannedCountriesState();
+  State<ViewCreditCards> createState() => _ViewCreditCardsState();
 }
 
-class _BannedCountriesState extends State<BannedCountries> {
+class _ViewCreditCardsState extends State<ViewCreditCards> {
   List<Map<String, dynamic>> _items = [];
-
-  late int totalCountries;
-  late Box box_banned;
+  // TextFields' controllers
+  final TextEditingController cardNumberController = TextEditingController();
+  final TextEditingController cardTypeController = TextEditingController();
+  final TextEditingController cardCVVController = TextEditingController();
+  final TextEditingController cardExpiryController = TextEditingController();
+  final TextEditingController cardCountryController = TextEditingController();
+  late int totalCards;
+  late Box box_cards;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    createOpenBox();
+    openBox();
   }
 
-  void createOpenBox() async {
-    box_banned = await Hive.openBox('banned_countries');
+  void openBox() async {
+    box_cards = await Hive.openBox('credit_cards');
     //
     _refreshItems();
   }
 
-
   // Get all items from the database
   void _refreshItems() {
-    final data = box_banned.keys.map((key) {
-      final value = box_banned.get(key);
-      return {"key": key, "country": value["country"]};
-    }).toList();
+    final sessionValue = sessionId; // Replace this with the session value you want to filter by
+    final data = box_cards.keys.map((key) {
+      final value = box_cards.get(key);
+      if (value["session"] == sessionValue) { // Filter by the specific session value
+        return {
+          "key": key,
+          "number": value["number"],
+          "type": value["type"],
+          "cvv": value["cvv"],
+          "expiry": value["expiry"],
+          "country": value["country"],
+        };
+      } else {
+        return null; // Return null for items that don't match the specific session value
+      }
+    }).whereType<Map<String, dynamic>>().toList(); // Remove null items from the list
 
     setState(() {
       _items = data.reversed.toList();
       // we use "reversed" to sort items in order from the latest to the oldest
     });
   }
-  int getTotalCountries() {
+
+  int getTotalCards() {
     return _items.length;
-  }
-  // Create new item
-  Future<void> _createItem(Map<String, dynamic> newItem) async {
-    await box_banned.add(newItem);
-    _refreshItems(); // update the UI
-  }
-
-  // Retrieve a single item from the database by using its key
-  // Our app won't use this function but I put it here for your reference
-  Map<String, dynamic> _readItem(int key) {
-    final item = box_banned.get(key);
-    return item;
-  }
-
-  // Update a single item
-  Future<void> _updateItem(int itemKey, Map<String, dynamic> item) async {
-    await box_banned.put(itemKey, item);
-    _refreshItems(); // Update the UI
   }
 
   // Delete a single item
   Future<void> _deleteItem(int itemKey) async {
-    await box_banned.delete(itemKey);
+    await box_cards.delete(itemKey);
     _refreshItems(); // update the UI
 
     // Display a snackbar
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The country has been deleted')));
+        const SnackBar(content: Text('The credit card has been deleted')));
   }
-
-  // TextFields' controllers
-  final TextEditingController countryController = TextEditingController();
 
   // This function will be triggered when the floating button is pressed
   // It will also be triggered when you want to update an item
   void _showForm(BuildContext ctx, int? itemKey) async {
-    // itemKey == null -> create new item
-    // itemKey != null -> update an existing item
 
     if (itemKey != null) {
       final existingItem =
       _items.firstWhere((element) => element['key'] == itemKey);
-      countryController.text = existingItem['country'];
+      cardNumberController.text = existingItem['number'];
+      cardTypeController.text = existingItem['type'];
+      cardCVVController.text = existingItem['cvv'];
+      cardExpiryController.text = existingItem['expiry'];
+      cardCountryController.text = existingItem['country'];
     }
 
     showModalBottomSheet(
         context: ctx,
         elevation: 5,
-        isScrollControlled: true,
+        isScrollControlled: false,
         builder: (_) =>
             Container(
               padding: EdgeInsets.only(
@@ -112,38 +111,42 @@ class _BannedCountriesState extends State<BannedCountries> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   TextField(
-                    controller: countryController,
-                    decoration: const InputDecoration(hintText: 'Country'),
+                    readOnly: true,
+                    controller: cardNumberController,
+                    decoration: const InputDecoration(labelText: 'Card Number'),
                   ),
                   const SizedBox(
                     height: 10,
                   ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Save new item
-                      if (itemKey == null) {
-                        _createItem({
-                          "country": countryController.text,
-                        });
-                      }
-
-                      // update an existing item
-                      if (itemKey != null) {
-                        _updateItem(itemKey, {
-                          'country': countryController.text.trim(),
-                        });
-                      }
-
-                      // Clear the text fields
-                      countryController.text = '';
-
-                      Navigator.of(context).pop(); // Close the bottom sheet
-                    },
-                    child: Text(itemKey == null ? 'Create New' : 'Update'),
+                  TextField(
+                    readOnly: true,
+                    controller: cardTypeController,
+                    decoration: const InputDecoration(labelText: 'Card Type'),
                   ),
                   const SizedBox(
-                    height: 15,
-                  )
+                    height: 10,
+                  ),
+                  TextField(
+                    readOnly: true,
+                    controller: cardCVVController,
+                    decoration: const InputDecoration(labelText: 'Card CVV Number'),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  TextField(
+                    readOnly: true,
+                    controller: cardExpiryController,
+                    decoration: const InputDecoration(labelText: 'Card Expiry Date'),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  TextField(
+                    readOnly: true,
+                    controller: cardCountryController,
+                    decoration: const InputDecoration(labelText: 'Issuing Country'),
+                  ),
                 ],
               ),
             ));
@@ -159,13 +162,17 @@ class _BannedCountriesState extends State<BannedCountries> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 25, 10, 30),
-            child: Text('Banned Countries (${getTotalCountries()})', // Display the count in the title
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                // Customize the content text style if needed
+            padding: const EdgeInsets.fromLTRB(30, 25, 30, 30),
+            child: Align(
+              alignment: Alignment.center,
+              child: Text(
+                '${getTotalCards()} Captured Credit Cards for Current Session ($sessionId)',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  // Customize the content text style if needed
+                ),
               ),
             ),
           ),
@@ -187,13 +194,15 @@ class _BannedCountriesState extends State<BannedCountries> {
                   margin: const EdgeInsets.all(10),
                   elevation: 3,
                   child: ListTile(
-                    title: Text(currentItem['country']),
+                    title: Text(currentItem['number']),
+                    subtitle: Text(currentItem['type']),
+
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Edit button
                         IconButton(
-                          icon: const Icon(Icons.edit),
+                          icon: const Icon(Icons.visibility),
                           onPressed: () =>
                               _showForm(context, currentItem['key']),
                         ),
@@ -204,7 +213,7 @@ class _BannedCountriesState extends State<BannedCountries> {
                         ),
                       ],
                     ),
-                  ),
+                    ),
                 );
               },
             ),
@@ -213,7 +222,14 @@ class _BannedCountriesState extends State<BannedCountries> {
       ),
       // Add new item button
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showForm(context, null),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddNewCard(),
+            ),
+          );
+        },
         child: const Icon(Icons.add),
       ),
     );
@@ -248,4 +264,6 @@ class _BannedCountriesState extends State<BannedCountries> {
       },
     );
   }
+
+
 }

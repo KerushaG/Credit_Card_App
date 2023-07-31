@@ -180,4 +180,9 @@ class SignUpPage extends State<SignUp> {
     );
   }
 
+  @override
+  void dispose() {
+    box_users.close();
+    super.dispose();
+  }
 }

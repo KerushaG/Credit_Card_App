@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:country_provider2/country_provider2.dart';
+import 'main.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -12,15 +12,21 @@ class AddNewCard extends StatefulWidget {
 }
 
 class AddNewCardPage extends State<AddNewCard> {
+
+  final _formKey = GlobalKey<FormState>();
   TextEditingController cardNumberController = TextEditingController();
   TextEditingController cardTypeController = TextEditingController();
   TextEditingController cardCVVController = TextEditingController();
   TextEditingController cardExpiryController = TextEditingController();
   TextEditingController cardCountryController = TextEditingController();
 
+  late Box box_cards;
+  late Box box_banned;
+
   CardType cardType = CardType.Invalid;
 
   void getCardTypeFrmNum() {
+    print('here');
     if (cardNumberController.text.length <= 6) {
       String cardNum = CardUtils.getCleanedNumber(cardNumberController.text);
       CardType type = CardUtils.getCardTypeFrmNumber(cardNum);
@@ -59,12 +65,96 @@ class AddNewCardPage extends State<AddNewCard> {
 
   @override
   void initState() {
+    // TODO: implement initState
+    cardNumberController.addListener(() {
+      getCardTypeFrmNum();
+    },);
+    super.initState();
+    createOpenBox();
+  }
 
+  void createOpenBox()async{
+    box_cards = await Hive.openBox('credit_cards');
+  }
+
+  Future<bool> validateCountry() async {
+
+    //CHECK FOR COUNTRY IN BANNED LIST
+    box_banned = await Hive.openBox('banned_countries');
+
+    for (var key in box_banned.keys) {
+      // Retrieve the value associated with the current key
+      var value = box_banned.get(key);
+
+      // Print the key-value pair
+      print('$key: $value');
+
+      if(value['country'] == cardCountryController.text.trim()) {
+        print('the selected country is indeed banned');
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> saveData(BuildContext context) async {
+
+    Future<bool> banned;
+    box_cards = await Hive.openBox('credit_cards');
+
+    //VALIDATE FOR BANNED COUNTRY
+    bool isBanned = await validateCountry();
+
+    if (isBanned) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Credit cards are banned from the country you selected.')));
+      return false;
+    }
+
+    //VALIDATE FOR EXISTING NUMBER
+    for (var key in box_cards.keys) {
+      // Retrieve the value associated with the current key
+      var value = box_cards.get(key);
+
+      // Print the key-value pair
+      print('$key: $value');
+
+      //CHECK FOR UNIQUE EMAIL AND PASSWORD
+      if(value['number'] == cardNumberController.text.trim()) {
+        print('found a duplicate');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('A credit card is already captured for the number you entered.')));
+        return false;
+      }
+    }
+
+    Map<String, dynamic> cardValues = {
+      // Adding multiple values to a key using a List
+      'session': sessionId,
+      'number': cardNumberController.text.trim(),
+      'type': cardTypeController.text.trim(),
+      'cvv': cardCVVController.text.trim(),
+      'expiry': cardExpiryController.text.trim(),
+      'country': cardCountryController.text.trim()
+    };
+
+    box_cards.add(cardValues);
+    await box_cards.close();
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The credit card you captured has been successfully saved.')));
+    return true;
   }
 
   @override
   void dispose() {
     cardNumberController.dispose();
+    cardTypeController.dispose();
+    cardCVVController.dispose();
+    cardExpiryController.dispose();
+    cardCountryController.dispose();
+    box_cards.close();
     super.dispose();
   }
 
@@ -91,6 +181,7 @@ class AddNewCardPage extends State<AddNewCard> {
                 ),
               ),
               Form(
+                key: _formKey,
                 child: Column(
                   children: [
                     Padding(
@@ -108,6 +199,12 @@ class AddNewCardPage extends State<AddNewCard> {
                           border: OutlineInputBorder(),
                           //suffix: CardUtils.getCardTypeDescription(cardType),
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a Card Number';
+                          }
+                          return null;
+                        },
                       ),
                     ),
                     Padding(
@@ -118,7 +215,12 @@ class AddNewCardPage extends State<AddNewCard> {
                         decoration: const InputDecoration(
                           labelText: 'Card Type',
                           border: OutlineInputBorder(),
-                        ),
+                        ),validator: (value) {
+                        if (value == null || value.isEmpty || value == 'Other') {
+                          return 'Please enter a valid Credit Card Number';
+                        }
+                        return null;
+                      },
                       ),
                     ),
                     Padding(
@@ -136,6 +238,12 @@ class AddNewCardPage extends State<AddNewCard> {
                                 LengthLimitingTextInputFormatter(4),
                               ],
                               decoration: const InputDecoration(hintText: "CVV"),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a CVV Number';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                           SizedBox(width: 10), // Add some spacing between the CVV and Expiry fields
@@ -148,6 +256,12 @@ class AddNewCardPage extends State<AddNewCard> {
                                 LengthLimitingTextInputFormatter(5),
                               ],
                               decoration: const InputDecoration(hintText: "MM/YY"),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a Card Expiry Date';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                         ],
@@ -157,7 +271,7 @@ class AddNewCardPage extends State<AddNewCard> {
                     Autocomplete<Country>(
                       optionsBuilder: (TextEditingValue textEditingValue) {
                         return countryOptions
-                            .where((Country continent) => continent.name.toLowerCase()
+                            .where((Country country) => country.name.toLowerCase()
                             .startsWith(textEditingValue.text.toLowerCase())
                         )
                             .toList();
@@ -165,18 +279,26 @@ class AddNewCardPage extends State<AddNewCard> {
                       displayStringForOption: (Country option) => option.name,
                       fieldViewBuilder: (
                           BuildContext context,
-                          TextEditingController countryController,
+                          TextEditingController cardCountryController,
                           FocusNode fieldFocusNode,
                           VoidCallback onFieldSubmitted
                           ) {
-                        return TextField(
-                          controller: countryController,
+                        return TextFormField(
+                          controller: cardCountryController,
                           decoration: const InputDecoration(hintText: "Issuing Country"),
                           focusNode: fieldFocusNode,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please provide an issuing country.';
+                            }
+                            // Additional validation checks can be done here
+                            return null; // Return null for valid input
+                          },
                         );
                       },
                       onSelected: (Country selection) {
                         print('Selected: ${selection.name}');
+                        cardCountryController.text = selection.name; // Set the selected country name in the controller
                       },
                       optionsViewBuilder: (
                           BuildContext context,
@@ -216,8 +338,13 @@ class AddNewCardPage extends State<AddNewCard> {
                         width: 350,
                         height: 45,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Handle the form submission here
+                          onPressed: () async {
+                            if (_formKey.currentState!.validate()) {
+                              bool isSaved = await saveData(context);
+                              if (isSaved) {
+                                Navigator.pop(context);
+                              }
+                            }
                           },
                           child: const Text('Submit'),
                         ),
