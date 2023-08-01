@@ -41,7 +41,7 @@ class AddNewCardPage extends State<AddNewCard> {
           RegExp(r".{4}"),
               (match) => "${match.group(0)} ",
         );
-        cardNumberController.text = formattedNumber.trimRight();
+        cardNumberController.text = formattedNumber;
       });
     }
   }
@@ -83,19 +83,32 @@ class AddNewCardPage extends State<AddNewCard> {
     }
   }
 
+
   @override
   void initState() {
     // TODO: implement initState
     cardNumberController.addListener(() {
       getCardTypeFromNumber();
     },);
+
+    super.initState();
+    createOpenBox();
+
+    // Reset the values of the TextEditingControllers and cardType
+    cardNumberController.text = "";
+    cardTypeController.text = "";
+    cardCVVController.text = "";
+    cardExpiryController.text = "";
+    cardCountryController.text = "";
+    cardType = CardType.Invalid;
+
     // Update the cardNumberController with scannedCardNumber if it's not null or empty
     if (scannedCardNumber != null && scannedCardNumber!.isNotEmpty) {
       setScannedCardNumberType();
     }
-    super.initState();
-    createOpenBox();
+
   }
+
 
   void createOpenBox()async{
     box_cards = await Hive.openBox('credit_cards');
@@ -136,8 +149,6 @@ class AddNewCardPage extends State<AddNewCard> {
       return false;
     }
 
-    //CLEAN NUMBER
-    String cleanCardNumber = CardUtils.getCleanedNumber(cardNumberController.text);
     //VALIDATE FOR EXISTING NUMBER
     for (var key in box_cards.keys) {
       // Retrieve the value associated with the current key
@@ -147,7 +158,7 @@ class AddNewCardPage extends State<AddNewCard> {
       print('$key: $value');
 
       //CHECK FOR UNIQUE EMAIL AND PASSWORD
-      if(value['number'] == cleanCardNumber) {
+      if(value['number'] == cardNumberController.text.trim()) {
         print('found a duplicate');
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +170,7 @@ class AddNewCardPage extends State<AddNewCard> {
     Map<String, dynamic> cardValues = {
       // Adding multiple values to a key using a List
       'session': sessionId,
-      'number': cleanCardNumber,
+      'number': cardNumberController.text.trim(),
       'type': cardTypeController.text.trim(),
       'cvv': cardCVVController.text.trim(),
       'expiry': cardExpiryController.text.trim(),
@@ -177,7 +188,7 @@ class AddNewCardPage extends State<AddNewCard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("Credit Card Submissions"), automaticallyImplyLeading: false,),
+      appBar: AppBar(title: const Text("Credit Card Submissions")),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -202,7 +213,6 @@ class AddNewCardPage extends State<AddNewCard> {
                       padding: const EdgeInsets.fromLTRB(10, 35, 10, 0),
                       child: TextFormField(
                         controller: cardNumberController,
-                        readOnly: scannedCardNumber != null && scannedCardNumber!.isNotEmpty,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -212,6 +222,7 @@ class AddNewCardPage extends State<AddNewCard> {
                         decoration: InputDecoration(
                           labelText: "Card Number",
                           border: OutlineInputBorder(),
+                          //suffix: CardUtils.getCardTypeDescription(cardType),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -356,7 +367,6 @@ class AddNewCardPage extends State<AddNewCard> {
                             if (_formKey.currentState!.validate()) {
                               bool isSaved = await saveData(context);
                               if (isSaved) {
-                                scannedCardNumber = "";
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -377,13 +387,15 @@ class AddNewCardPage extends State<AddNewCard> {
                         height: 45,
                         child: ElevatedButton(
                           onPressed: () {
-                            scannedCardNumber = "";
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HomePage(),
-                              ),
-                            );
+                            Navigator.pushNamed(context, '/home').then((_) {
+                              // Clear the TextEditingControllers when navigating back to the page
+                              cardNumberController.clear();
+                              cardTypeController.clear();
+                              cardCVVController.clear();
+                              cardExpiryController.clear();
+                              cardCountryController.clear();
+                              cardType = CardType.Invalid;
+                            });
                           },
                           child: const Text('Cancel'),
                         ),
@@ -410,7 +422,6 @@ class AddNewCardPage extends State<AddNewCard> {
     scannedCardNumber = null;
     super.dispose();
   }
-
 }
 
 //ALLOW SPACES WHEN USER ENTERS CARD NO
@@ -481,7 +492,7 @@ class CardUtils {
     return text.replaceAll(regExp, '');
   }
 
-   String getCardTypeDescription(CardType cardType) {
+  String getCardTypeDescription(CardType cardType) {
     String creditcardtyperesult = "";
     switch (cardType) {
       case CardType.Master:
@@ -514,119 +525,6 @@ class CardUtils {
     }
 
     return creditcardtyperesult;
-  }
-
-  /// With the card number with Luhn Algorithm
-  /// https://en.wikipedia.org/wiki/Luhn_algorithm
-  static String? validateCardNum(String? input) {
-    if (input == null || input.isEmpty) {
-      return "This field is required";
-    }
-    input = getCleanedNumber(input);
-
-    if (input.length < 8) {
-      return "Card is invalid";
-    }
-    int sum = 0;
-    int length = input.length;
-    for (var i = 0; i < length; i++) {
-      // get digits in reverse order
-      int digit = int.parse(input[length - i - 1]);
-// every 2nd number multiply with 2
-      if (i % 2 == 1) {
-        digit *= 2;
-      }
-      sum += digit > 9 ? (digit - 9) : digit;
-    }
-    if (sum % 10 == 0) {
-      return null;
-    }
-    return "Card is invalid";
-  }
-
-  static String? validateCVV(String? value) {
-    if (value == null || value.isEmpty) {
-      return "This field is required";
-    }
-    if (value.length < 3 || value.length > 4) {
-      return "CVV is invalid";
-    }
-    return null;
-  }
-
-  static String? validateDate(String? value) {
-    if (value == null || value.isEmpty) {
-      return "This field is required";
-    }
-    int year;
-    int month;
-    if (value.contains(RegExp(r'(/)'))) {
-      var split = value.split(RegExp(r'(/)'));
-
-      month = int.parse(split[0]);
-      year = int.parse(split[1]);
-    } else {
-
-      month = int.parse(value.substring(0, (value.length)));
-      year = -1; // Lets use an invalid year intentionally
-    }
-    if ((month < 1) || (month > 12)) {
-      // A valid month is between 1 (January) and 12 (December)
-      return 'Expiry month is invalid';
-    }
-    var fourDigitsYear = convertYearTo4Digits(year);
-    if ((fourDigitsYear < 1) || (fourDigitsYear > 2099)) {
-      // We are assuming a valid should be between 1 and 2099.
-      // Note that, it's valid doesn't mean that it has not expired.
-      return 'Expiry year is invalid';
-    }
-    if (!hasDateExpired(month, year)) {
-      return "Card has expired";
-    }
-    return null;
-  }
-
-  /// Convert the two-digit year to four-digit year if necessary
-  static int convertYearTo4Digits(int year) {
-    if (year < 100 && year >= 0) {
-      var now = DateTime.now();
-      String currentYear = now.year.toString();
-      String prefix = currentYear.substring(0, currentYear.length - 2);
-      year = int.parse('$prefix${year.toString().padLeft(2, '0')}');
-    }
-    return year;
-  }
-
-  static bool hasDateExpired(int month, int year) {
-    return isNotExpired(year, month);
-  }
-
-  static bool isNotExpired(int year, int month) {
-    // It has not expired if both the year and date has not passed
-    return !hasYearPassed(year) && !hasMonthPassed(year, month);
-  }
-
-  static List<int> getExpiryDate(String value) {
-    var split = value.split(RegExp(r'(/)'));
-    return [int.parse(split[0]), int.parse(split[1])];
-  }
-
-  static bool hasMonthPassed(int year, int month) {
-    var now = DateTime.now();
-    // The month has passed if:
-    // 1. The year is in the past. In that case, we just assume that the month
-    // has passed
-    // 2. Card's month (plus another month) is more than current month.
-    return hasYearPassed(year) ||
-        convertYearTo4Digits(year) == now.year && (month < now.month + 1);
-  }
-  
-  static bool hasYearPassed(int year) {
-    int fourDigitsYear = convertYearTo4Digits(year);
-    var now = DateTime.now();
-    // The year has passed if the year we are currently is more than card's
-    // year
-    return fourDigitsYear < now.year;
   }
 }
 

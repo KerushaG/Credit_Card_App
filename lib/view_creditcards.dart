@@ -40,13 +40,25 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
 
   // Get all items from the database
   void _refreshItems() {
+    String formattedNumber;
+    String originalNumber;
+
     final sessionValue = sessionId; // Replace this with the session value you want to filter by
     final data = box_cards.keys.map((key) {
       final value = box_cards.get(key);
       if (value["session"] == sessionValue) { // Filter by the specific session value
+        // Get the original card number
+        originalNumber = value["number"];
+
+        // Format the card number with spaces for every four digits
+        formattedNumber = originalNumber.replaceAllMapped(
+          RegExp(r".{4}"),
+              (match) => "${match.group(0)} ",
+        ).trim(); // Remove any leading/trailing spaces
+
         return {
           "key": key,
-          "number": value["number"],
+          "number": formattedNumber,
           "type": value["type"],
           "cvv": value["cvv"],
           "expiry": value["expiry"],

@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ml_card_scanner/ml_card_scanner.dart';
+import 'add_creditcard.dart';
+
+String? scannedCardNumber = "";
 
 class Scanning extends StatefulWidget {
   const Scanning({Key? key}) : super(key: key);
@@ -25,7 +28,15 @@ class _ScanningState extends State<Scanning> {
 
           // Get the second line (index 1) and third line (index 2) from the list
           cardNumber = 'Card ' + lines[1];
-          //_cardInfo = cardNumber as CardInfo?;
+
+          //SAVE SCANNED CARD NUMBER
+          if(lines[1] != "" || lines[1] != null){
+            RegExp regex = RegExp(r'\d+');
+            Iterable<Match> matches = regex.allMatches(lines[1]);
+            scannedCardNumber = matches.map((match) => match.group(0)).join();
+          } else {
+            scannedCardNumber = ""; // If no card number is found, set it to an empty string or handle it as needed.
+          }
 
         });
       })
@@ -42,6 +53,7 @@ class _ScanningState extends State<Scanning> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Credit Card Submissions'),
+        automaticallyImplyLeading: false,
       ),
       body: Center(
         child: Column(
@@ -76,8 +88,12 @@ class _ScanningState extends State<Scanning> {
                     width: 350, // Add your desired width here
                     child: ElevatedButton(
                       onPressed: () {
-                        // Handle submit button press here
-                        // You can add your logic to submit the card details
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddNewCard(),
+                          ),
+                        );
                       },
                       child: Text('Submit'),
                     ),
@@ -86,8 +102,8 @@ class _ScanningState extends State<Scanning> {
                     width: 350, // Add your desired width here
                     child: ElevatedButton(
                       onPressed: () {
-                        // Handle cancel button press here
-                        // You can add your logic to cancel the submission
+                        scannedCardNumber = "";
+                        Navigator.pop(context);
                       },
                       child: Text('Cancel'),
                     ),
@@ -101,5 +117,11 @@ class _ScanningState extends State<Scanning> {
     );
   }
 
-
+  @override
+  void dispose() {
+    // Clear or dispose of the variables here
+    _controller.dispose();
+    _cardInfo = null;
+    super.dispose();
+  }
 }
