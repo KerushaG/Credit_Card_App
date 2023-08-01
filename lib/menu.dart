@@ -3,6 +3,7 @@ import 'banned_countries.dart';
 import 'add_creditcard.dart';
 import 'main.dart';
 import 'view_creditcards.dart';
+import 'scan_creditcard.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -52,7 +53,12 @@ class HomePage extends StatelessWidget {
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () { Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scanning(),
+                    ),
+                  );},
                   child: const Text("Scan Card"),
                 ),
               ),
