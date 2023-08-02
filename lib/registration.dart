@@ -3,65 +3,71 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class SignUp extends StatefulWidget {
-  //const SignUp({super.key, required this.title});
+
   const SignUp({Key? key}) : super(key: key);
-  //final String title;
+
   @override
   State<SignUp> createState() => SignUpPage();
 }
 
 class SignUpPage extends State<SignUp> {
 
+  //DECLARE VARIABLES
   final _formKey = GlobalKey<FormState>();
+  late bool uniqueUser;
+  late Box box_users;
+
+  //DECLARE USER INPUT OBJECTS
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController usernameController = TextEditingController();
-  late bool uniqueUser;
 
-  late Box box_users;
-
+  //INITIAL SETUP OF THE WIDGET
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    createOpenBox();
   }
 
-  void createOpenBox()async{
-    box_users = await Hive.openBox('users');
-  }
+  //FUNCTIONS FOR THE WIDGET
+  Future<String> saveNewUser() async {
+    try {
+      //OPEN BOX THAT STORES USER INFO
+      box_users = await Hive.openBox('users');
 
-  Future<bool> saveData() async {
+      //VALIDATE FOR EXISTING USER
+      for (var key in box_users.keys) {
+        //LOOP THROUGH BOX AND GET KEY VALUE PAIRS
+        var value = box_users.get(key);
 
-    box_users = await Hive.openBox('users');
-
-    //VALIDATE FOR EXISTING USER
-    for (var key in box_users.keys) {
-      // Retrieve the value associated with the current key
-      var value = box_users.get(key);
-
-      // Print the key-value pair
-      print('$key: $value');
-
-      //CHECK FOR UNIQUE EMAIL AND PASSWORD
-      if(value['email'] == emailController.text.trim()) {
-        print('found a duplicate');
-        return false;
+        //CHECK FOR UNIQUE EMAIL
+        if (value['email'] == emailController.text.trim()) {
+          //EXIT AND DO NOT SAVE
+          await box_users.close();
+          return "A user already exists for the e-mail address you entered.";
+        }
       }
+
+      //SAVE USER DATA FOR ONE KEY
+      Map<String, dynamic> signupValues = {
+        'username': usernameController.text.trim(),
+        'email': emailController.text.trim(),
+        'password': passwordController.text.trim(),
+      };
+
+      await box_users.add(signupValues);
+      await box_users.close();
+
+      //SAVE SUCCESSFUL
+      return "true";
     }
-
-    Map<String, dynamic> signupValues = {
-    // Adding multiple values to a key using a List
-    'username': usernameController.text.trim(),
-    'email': emailController.text.trim(),
-    'password': passwordController.text.trim()
-    };
-
-    box_users.add(signupValues);
-    await box_users.close();
-    return true;
+    catch (e)
+    {
+      return "Error saving new user: $e";
+    }
   }
 
+  //MAIN UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,7 +76,7 @@ class SignUpPage extends State<SignUp> {
       ),
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView( // Wrap with SingleChildScrollView
+        child: SingleChildScrollView( // STOP OVERFLOW
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -83,7 +89,6 @@ class SignUpPage extends State<SignUp> {
                     color: Colors.black,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    // Customize the content text style if needed
                   ),
                 ),
               ),
@@ -143,14 +148,17 @@ class SignUpPage extends State<SignUp> {
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                   child: ElevatedButton(
                     onPressed: () async {
+                      //VALIDATIONS
                       if (_formKey.currentState!.validate()) {
-                        bool isSaved = await saveData();
-                        if (isSaved) {
+                        String isSaved = await saveNewUser();
+                        if (isSaved == "true") {
+                          //IF PASSED GO TO LOGIN
                           Navigator.pop(context);
                         } else {
+                          //ELSE INFORM USER ON FAILED VALIDATION
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('A user already exists for the e-mail address you entered.'),
+                             SnackBar(
+                              content: Text(isSaved),
                             ),
                           );
                         }
@@ -162,11 +170,12 @@ class SignUpPage extends State<SignUp> {
               ),
               Center(
                 child: Container(
-                  width: 350, // Set your desired width here
+                  width: 350,
                   height: 70,
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                   child: ElevatedButton(
                     onPressed: () {
+                      //RETURN TO LOGIN
                       Navigator.pop(context);
                     },
                     child: const Text('Cancel'),
@@ -180,9 +189,12 @@ class SignUpPage extends State<SignUp> {
     );
   }
 
+  //DISPOSE ALL OBJECTS
   @override
   void dispose() {
-    box_users.close();
+    emailController.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 }

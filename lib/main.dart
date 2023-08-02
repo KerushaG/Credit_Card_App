@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'registration.dart';
 import 'menu.dart';
 
-int? sessionId;
+//DECLARE GLOBAL VARIABLES
+int sessionId = 0;
+String userName = '';
 
+//APP STARTS HERE
 void main() async{
   await Hive.initFlutter();
   runApp(const MyApp());
@@ -16,6 +18,7 @@ class MyApp extends StatelessWidget {
 
   static const String _title = 'Submit Credit Cards';
 
+  //TOP PAGE UI STYLING
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -35,167 +38,195 @@ class Login extends StatefulWidget {
 }
 
 class LoginPage extends State<Login> {
+
+  //DECLARE VARIABLES
   final _formKey = GlobalKey<FormState>();
-  TextEditingController usernameController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  late bool login_passed;
+  late String login_passed;
   late Box box_users;
   late Box box_session;
 
+  //DECLARE USER INPUT OBJECTS
+  TextEditingController usernameController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+
+  //INITIAL SETUP OF THE WIDGET
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
   }
 
-  Future<int?> getData() async {
+  //FUNCTIONS FOR THE WIDGET
+  Future<String?> validateUser() async {
+    try
+    {
+      //OPEN BOX THAT STORES USER INFO
+      box_users = await Hive.openBox('users');
 
-    box_users = await Hive.openBox('users');
+      //VALIDATE USER EXISTS
+      for (var key in box_users.keys) {
+        //LOOP THROUGH BOX AND GET KEY VALUE PAIRS
+        var value = box_users.get(key);
 
-    int totalValues = box_users.length;
-
-    // Print the total number of values
-    print('Total number of values in the box: $totalValues');
-    for (var key in box_users.keys) {
-      // Retrieve the value associated with the current key
-      var value = box_users.get(key);
-
-      // Print the key-value pair
-      print('$key: $value');
-
-      if(value['username'] == usernameController.text.trim() && value['password'] == passwordController.text.trim()) {
-        login_passed = true;
-        //CREATE SESSION
-        print(key);
-        return key;
+        if(value['username'] == usernameController.text.trim() && value['password'] == passwordController.text.trim()) {
+          login_passed = "true";
+          //SAVE USERNAME
+          userName = value['username'];
+          //RETURN ON USER KEY
+          return key.toString();
+        }
       }
+      login_passed = "Invalid User Credentials.";
+      return null;
     }
-    login_passed = false;
-    return null;
+    catch (e)
+    {
+      login_passed = "There is an error in validating your user credentials: $e";
+      return null;
+    }
   }
 
-  Future<int> createSession(int userKey) async {
-    box_session = await Hive.openBox('sessions');
-    DateTime now = DateTime.now();
+  Future<int> createSession(String userKey) async {
+    try {
+      //OPEN BOX THAT STORES SESSIONS FOR USERS WHO LOG IN
+      box_session = await Hive.openBox('sessions');
 
-    Map<String, dynamic> sessionValues = {
-      'userKey': userKey,
-      'dateTimeStarted': now.toString(),
-      'dateTimeEnded': '',
-    };
+      //await box_session.clear();
 
-    int key = await box_session.add(sessionValues);
-    await box_session.close();
-    return key;
+      DateTime now = DateTime.now();
+
+      //ADD USER ID AND DATETIME STAMP
+      Map<String, dynamic> sessionValues = {
+        'userKey': userKey,
+        'dateTimeStarted': now.toString(),
+      };
+
+      //SAVE KEY
+      int key = await box_session.add(sessionValues);
+
+      await box_session.close();
+
+      return key;
+
+    } catch (e) {
+      return -1; // Return a default value or throw an appropriate error
+    }
   }
 
-
+  //MAIN UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Credit Card Submissions'),
       ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Padding (
-                padding: const EdgeInsets.fromLTRB(10, 25, 10, 0),
-                child: Text('User Login', style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  // Customize the content text style if needed
-                ),),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 50, 10, 0),
-                child: TextFormField(
-                  controller: usernameController,
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(), labelText: "Username"),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your Username';
-                    }
-                    return null;
-                  },
+      body: SingleChildScrollView( // STOP OVERFLOW
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 20, 10, 0),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Text('User Login',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                child: TextFormField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(), labelText: "Password"),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your Password';
-                    }
-                    return null;
-                  },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 50, 10, 0),
+                  child: TextFormField(
+                    controller: usernameController,
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(), labelText: "Username"),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your Username';
+                      }
+                      return null;
+                    },
+                  ),
                 ),
-              ),
-              Center (
-                child: Container (
-                  width: 350,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      int? userKey = await getData(); // Get the userKey from getData()
-                      if (login_passed && userKey != null) {
-                        sessionId = await createSession(userKey); // Assign sessionId here
+                Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                  child: TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(), labelText: "Password"),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your Password';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                Center (
+                  child: Container (
+                    width: 350,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        String? userKey = await validateUser();
+                        if (login_passed == "true" && userKey != null  && userKey != "-1") {
+                          sessionId = await createSession(userKey); // SAVE SESSION ID
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => HomePage()),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(login_passed),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Login'),
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    width: 350, // Set your desired width here
+                    height: 70,
+                    padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                    child: ElevatedButton(
+                      onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => HomePage()),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Invalid Credentials'),
+                          MaterialPageRoute(
+                            builder: (context) => SignUp(),
                           ),
                         );
-                      }
-                    },
-
-
-                    child: const Text('Login'),
+                      },
+                      child: const Text('Sign Up'),
+                    ),
                   ),
                 ),
-              ),
-              Center(
-                child: Container(
-                  width: 350, // Set your desired width here
-                  height: 70,
-                  padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SignUp(),
-                        ),
-                      );
-                    },
-                    child: const Text('Sign Up'),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  //DISPOSE ALL OBJECTS
   @override
   void dispose() {
+    usernameController.dispose();
+    passwordController.dispose();
     box_users.close();
     box_session.close();
     super.dispose();

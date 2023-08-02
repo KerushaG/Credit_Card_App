@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'main.dart';
 import 'add_creditcard.dart';
-import 'view_allcreditcards.dart';
 
-class ViewCreditCards extends StatefulWidget {
-  const ViewCreditCards({Key? key}) : super(key: key);
+class ViewCreditCardsAll extends StatefulWidget {
+  const ViewCreditCardsAll({Key? key}) : super(key: key);
 
   @override
-  State<ViewCreditCards> createState() => _ViewCreditCardsState();
+  State<ViewCreditCardsAll> createState() => _ViewCreditCardsAllState();
 }
 
-class _ViewCreditCardsState extends State<ViewCreditCards> {
+class _ViewCreditCardsAllState extends State<ViewCreditCardsAll> {
 
   //DECLARE VARIABLES
-  List<Map<String, dynamic>> map_cards = [];
   late int totalCards;
   late Box box_cards;
+  List<Map<String, dynamic>> map_cards = [];
 
   //DECLARE USER INPUT OBJECTS
   final TextEditingController cardNumberController = TextEditingController();
@@ -34,61 +32,44 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
     openBox();
   }
 
-  //FUNCTIONS FOR THE WIDGET
   void openBox() async {
     box_cards = await Hive.openBox('credit_cards');
-    //box_cards.clear();
     loadList();
   }
 
   void loadList() {
-   try{
-     //DECLARE VARIABLES
-     String formattedNumber;
-     String originalNumber;
 
-     //GET SESSION ID
-     final sessionValue = sessionId;
+    //DECLARE VARIABLES
+    String formattedNumber;
+    String originalNumber;
 
-     final data = box_cards.keys.map((key) {
-       //DATA FROM BOX CAST TO A MAP WITH ALL KEY VALUE PAIRS
-       final value = box_cards.get(key);
-       //FILTER FOR CURRENT SESSION
-       if (value["session"] == sessionValue) {
-         //SAVE CARD NUMBER
-         originalNumber = value["number"];
+    final data = box_cards.keys.map((key) {
+      //DATA FROM BOX CAST TO A MAP WITH ALL KEY VALUE PAIRS
+      final value = box_cards.get(key);
+      //SAVE CARD NUMBER
+      originalNumber = value["number"];
 
-         //FORMAT CARD NUMBER
-         formattedNumber = originalNumber.replaceAllMapped(
-           RegExp(r".{4}"),
-               (match) => "${match.group(0)} ",
-         ).trim();
+      //FORMAT CARD NUMBER
+      formattedNumber = originalNumber.replaceAllMapped(
+        RegExp(r".{4}"),
+            (match) => "${match.group(0)} ",
+      ).trim();
 
-         return {
-           "key": key,
-           "number": formattedNumber,
-           "type": value["type"],
-           "cvv": value["cvv"],
-           "expiry": value["expiry"],
-           "country": value["country"],
-         };
-       } else {
-         return null;
-       }
-     }).whereType<Map<String, dynamic>>().toList();
+      return {
+        "key": key,
+        "number": formattedNumber,
+        "type": value["type"],
+        "cvv": value["cvv"],
+        "expiry": value["expiry"],
+        "country": value["country"],
+      };
+    }).whereType<Map<String, dynamic>>().toList();
 
-     //UPDATE THE WIDGET WITH THE LIST
-     setState(() {
-       //SHOW ORDER FROM NEWEST ADDITIONS
-       map_cards = data.reversed.toList();
-     });
-   }catch (e)
-   {
-     //DISPLAY USER MESSAGE
-     if (!mounted) return;
-     ScaffoldMessenger.of(context).showSnackBar(
-         const SnackBar(content: Text('Error in getting list.')));
-   }
+    //UPDATE THE WIDGET WITH THE LIST
+    setState(() {
+      map_cards = data.reversed.toList();
+      //SHOW ORDER FROM NEWEST ADDITIONS
+    });
   }
 
   int getTotalCards() {
@@ -96,13 +77,14 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
   }
 
   //DELETE CARD
-  Future<void> deleteCard(int cardKey) async {
+  Future<void> deleteCard(int itemKey) async {
     try{
-      await box_cards.delete(cardKey);
+      await box_cards.delete(itemKey);
+
       //REFRESH LIST
       loadList();
 
-      //DISPLAY MESSAGE TO USER
+      //DISPLAY USER MESSAGE
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('The credit card has been deleted')));
@@ -116,17 +98,17 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
   }
 
   //SETS POP UP FOR VIEWING CARD INFO
-  void displayCardDetails(BuildContext ctx, int? cardKey) async {
+  void displayCardDetails(BuildContext ctx, int? itemKey) async {
 
     //VALIDATE FOR SELECTED CARD
-    if (cardKey != null) {
-      final existingCard =
-      map_cards.firstWhere((element) => element['key'] == cardKey);
-      cardNumberController.text = existingCard['number'];
-      cardTypeController.text = existingCard['type'];
-      cardCVVController.text = existingCard['cvv'];
-      cardExpiryController.text = existingCard['expiry'];
-      cardCountryController.text = existingCard['country'];
+    if (itemKey != null) {
+      final existingItem =
+      map_cards.firstWhere((element) => element['key'] == itemKey);
+      cardNumberController.text = existingItem['number'];
+      cardTypeController.text = existingItem['type'];
+      cardCVVController.text = existingItem['cvv'];
+      cardExpiryController.text = existingItem['expiry'];
+      cardCountryController.text = existingItem['country'];
     }
     //ALL FIELDS ARE SET TO READ ONLY
     showModalBottomSheet(
@@ -197,18 +179,19 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
         title: const Text('Credit Card Submissions'),
       ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(30, 25, 30, 30),
             child: Align(
               alignment: Alignment.center,
               child: Text(
-                '${getTotalCards()} Captured Credit Cards for Current Session ($sessionId)',
+                '${getTotalCards()} Captured Credit Cards',
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
+                  // Customize the content text style if needed
                 ),
               ),
             ),
@@ -224,26 +207,31 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
             )
             //DISPLAY LIST
                 : ListView.builder(
+              // the list of items
               itemCount: map_cards.length,
               itemBuilder: (_, index) {
-                final currentCard = map_cards[index];
+                final currentItem = map_cards[index];
                 return Card(
                   color: Colors.blue.shade50,
                   margin: const EdgeInsets.all(10),
                   elevation: 3,
                   child: ListTile(
-                    title: Text(currentCard['number']),
-                    subtitle: Text(currentCard['type']),
+                    title: Text(currentItem['number']),
+                    subtitle: Text(currentItem['type']),
+
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        //EDIT BUTTON
                         IconButton(
                           icon: const Icon(Icons.visibility),
-                          onPressed: () => displayCardDetails(context, currentCard['key']),
+                          onPressed: () =>
+                              displayCardDetails(context, currentItem['key']),
                         ),
+                        //DELETE BUTTON
                         IconButton(
                           icon: const Icon(Icons.delete),
-                          onPressed: () => _showDeleteConfirmationDialog(currentCard['key']),
+                          onPressed: () => _showDeleteConfirmationDialog(currentItem['key']),
                         ),
                       ],
                     ),
@@ -254,7 +242,7 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
           ),
         ],
       ),
-      //DISPLAY ADD BUTTON
+      //ADD BUTTON
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -264,27 +252,8 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
             ),
           );
         },
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
-      //DISPLAY VIEW ALL BUTTON
-      persistentFooterButtons: [
-        Container(
-          width: 350,
-          height: 60,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ViewCreditCardsAll(),
-                ),
-              );
-            },
-            child: Text('View All'),
-          ),
-        ),
-      ],
     );
   }
 
@@ -299,7 +268,7 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
           actions: [
             TextButton(
               onPressed: () {
-                //CLOSE DIALOG
+                //CLOSE THE DIALOG
                 Navigator.of(context).pop();
               },
               child: const Text("Cancel"),
@@ -310,7 +279,7 @@ class _ViewCreditCardsState extends State<ViewCreditCards> {
                   //DELETE CARD
                   deleteCard(cardKey);
                 });
-                //CLOSE DIALOG
+                //CLOSE THE DIALOG
                 Navigator.of(context).pop();
               },
               child: const Text("Delete"),

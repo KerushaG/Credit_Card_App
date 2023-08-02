@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'countries.dart';
 
-//ADD COUNT OF ITEMS
-//ADD ARE YOU SURE YOU WANNA DELETE IT
-
-// Home Page
 class BannedCountries extends StatefulWidget {
   const BannedCountries({Key? key}) : super(key: key);
 
@@ -14,141 +11,154 @@ class BannedCountries extends StatefulWidget {
 }
 
 class _BannedCountriesState extends State<BannedCountries> {
-  List<Map<String, dynamic>> _items = [];
-
+  // DECLARE VARIABLES
+  List<Map<String, dynamic>> map_cards = [];
   late int totalCountries;
   late Box box_banned;
+  String selectedCountryName = '';
 
+  // DECLARE USER INPUT OBJECTS
+  final TextEditingController countryController = TextEditingController();
+
+  // INITIAL SETUP OF THE WIDGET
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    createOpenBox();
+    openBox();
   }
 
-  void createOpenBox() async {
+  void openBox() async {
     box_banned = await Hive.openBox('banned_countries');
-    //
-    _refreshItems();
+    loadList();
   }
 
-
-  // Get all items from the database
-  void _refreshItems() {
+  void loadList() {
     final data = box_banned.keys.map((key) {
       final value = box_banned.get(key);
       return {"key": key, "country": value["country"]};
     }).toList();
 
+    data.sort((a, b) => a["country"].compareTo(b["country"]));
+
     setState(() {
-      _items = data.reversed.toList();
-      // we use "reversed" to sort items in order from the latest to the oldest
+      map_cards = data.toList();
     });
   }
+
   int getTotalCountries() {
-    return _items.length;
-  }
-  // Create new item
-  Future<void> _createItem(Map<String, dynamic> newItem) async {
-    await box_banned.add(newItem);
-    _refreshItems(); // update the UI
+    return map_cards.length;
   }
 
-  // Retrieve a single item from the database by using its key
-  // Our app won't use this function but I put it here for your reference
-  Map<String, dynamic> _readItem(int key) {
-    final item = box_banned.get(key);
-    return item;
+  // ADD COUNTRY
+  Future<void> createCountry(Map<String, dynamic> newCountry) async {
+    try {
+      await box_banned.add(newCountry);
+      loadList();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The country has been created.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error in adding card.')),
+      );
+    }
   }
 
-  // Update a single item
-  Future<void> _updateItem(int itemKey, Map<String, dynamic> item) async {
-    await box_banned.put(itemKey, item);
-    _refreshItems(); // Update the UI
+  // EDIT COUNTRY
+  Future<void> editCountry(int countryKey, Map<String, dynamic> selectedCountry) async {
+    try {
+      await box_banned.put(countryKey, selectedCountry);
+      loadList();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The country has been edited.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error in editing card.')),
+      );
+    }
   }
 
-  // Delete a single item
-  Future<void> _deleteItem(int itemKey) async {
-    await box_banned.delete(itemKey);
-    _refreshItems(); // update the UI
-
-    // Display a snackbar
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The country has been deleted')));
+  // DELETE COUNTRY
+  Future<void> deleteCountry(int countryKey) async {
+    try {
+      await box_banned.delete(countryKey);
+      loadList();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The country has been deleted')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error in deleting card.')),
+      );
+    }
   }
 
-  // TextFields' controllers
-  final TextEditingController countryController = TextEditingController();
-
-  // This function will be triggered when the floating button is pressed
-  // It will also be triggered when you want to update an item
-  void _showForm(BuildContext ctx, int? itemKey) async {
-    // itemKey == null -> create new item
-    // itemKey != null -> update an existing item
-
-    if (itemKey != null) {
+  // SETS POP UP FOR VIEWING CARD INFO
+  void displayCountryMaintenance(BuildContext ctx, int? countryKey) async {
+    if (countryKey != null) {
       final existingItem =
-      _items.firstWhere((element) => element['key'] == itemKey);
-      countryController.text = existingItem['country'];
+      map_cards.firstWhere((element) => element['key'] == countryKey);
+      countryController.text = existingItem['country']; // Update the text in the controller
+    } else {
+      countryController.text = ''; // Clear the text in the controller for adding a new country
     }
 
     showModalBottomSheet(
-        context: ctx,
-        elevation: 5,
-        isScrollControlled: true,
-        builder: (_) =>
-            Container(
-              padding: EdgeInsets.only(
-                  bottom: MediaQuery
-                      .of(ctx)
-                      .viewInsets
-                      .bottom,
-                  top: 15,
-                  left: 15,
-                  right: 15),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TextField(
-                    controller: countryController,
-                    decoration: const InputDecoration(hintText: 'Country'),
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Save new item
-                      if (itemKey == null) {
-                        _createItem({
-                          "country": countryController.text,
-                        });
-                      }
+      context: ctx,
+      elevation: 5,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 15,
+          right: 15,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const SizedBox(height: 40),
+            TextField(
+              controller: countryController,
+              decoration: const InputDecoration(hintText: 'Country'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                // ADD NEW COUNTRY
+                if (countryKey == null) {
+                  createCountry({
+                    "country": countryController.text, // Use the countryController text here
+                  });
+                }
+                // EDIT COUNTRY
+                if (countryKey != null) {
+                  editCountry(countryKey, {
+                    'country': countryController.text.trim(), // Use the countryController text here
+                  });
+                }
 
-                      // update an existing item
-                      if (itemKey != null) {
-                        _updateItem(itemKey, {
-                          'country': countryController.text.trim(),
-                        });
-                      }
-
-                      // Clear the text fields
-                      countryController.text = '';
-
-                      Navigator.of(context).pop(); // Close the bottom sheet
-                    },
-                    child: Text(itemKey == null ? 'Create New' : 'Update'),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  )
-                ],
-              ),
-            ));
+                // CLOSE DIALOG
+                Navigator.of(context).pop();
+              },
+              // VALIDATE AND NAME BUTTON
+              child: Text(countryKey == null ? 'Create New' : 'Update'),
+            ),
+            const SizedBox(height: 15),
+          ],
+        ),
+      ),
+    );
   }
 
+  // MAIN UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,28 +170,29 @@ class _BannedCountriesState extends State<BannedCountries> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 25, 10, 30),
-            child: Text('Banned Countries (${getTotalCountries()})', // Display the count in the title
+            child: Text(
+              'Banned Countries (${getTotalCountries()})',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                // Customize the content text style if needed
               ),
             ),
           ),
           Expanded(
-            child: _items.isEmpty
+            // VALIDATE FOR DATA
+            child: map_cards.isEmpty
                 ? Center(
               child: Text(
                 'No Data',
                 style: TextStyle(fontSize: 30),
               ),
             )
+            // DISPLAY LIST
                 : ListView.builder(
-              // the list of items
-              itemCount: _items.length,
+              itemCount: map_cards.length,
               itemBuilder: (_, index) {
-                final currentItem = _items[index];
+                final currentItem = map_cards[index];
                 return Card(
                   color: Colors.blue.shade50,
                   margin: const EdgeInsets.all(10),
@@ -191,13 +202,13 @@ class _BannedCountriesState extends State<BannedCountries> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Edit button
+                        // EDIT BUTTON
                         IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () =>
-                              _showForm(context, currentItem['key']),
+                              displayCountryMaintenance(context, currentItem['key']),
                         ),
-                        // Delete button
+                        // DELETE BUTTON
                         IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () => _showDeleteConfirmationDialog(currentItem['key']),
@@ -211,35 +222,38 @@ class _BannedCountriesState extends State<BannedCountries> {
           ),
         ],
       ),
-      // Add new item button
+      // ADD NEW BUTTON
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showForm(context, null),
+        onPressed: () => displayCountryMaintenance(context, null),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showDeleteConfirmationDialog(int itemKey) {
+  // ASK USER FOR CONFIRMATION WHEN DELETING
+  void _showDeleteConfirmationDialog(int countryKey) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Delete Item"),
-          content: const Text("Are you sure you want to delete this item?"),
+          title: const Text("Delete Country"),
+          content: const Text("Are you sure you want to delete this country?"),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                // CLOSE DIALOG
+                Navigator.of(context).pop();
               },
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () {
-                // Perform the delete operation inside the setState callback
                 setState(() {
-                  _deleteItem(itemKey); // Delete the item
+                  // DELETE COUNTRY
+                  deleteCountry(countryKey);
                 });
-                Navigator.of(context).pop(); // Close the dialog
+                // CLOSE DIALOG
+                Navigator.of(context).pop();
               },
               child: const Text("Delete"),
             ),
@@ -247,5 +261,12 @@ class _BannedCountriesState extends State<BannedCountries> {
         );
       },
     );
+  }
+
+  // DISPOSE ALL OBJECTS
+  @override
+  void dispose() {
+    countryController.dispose();
+    super.dispose();
   }
 }

@@ -8,6 +8,7 @@ import 'scan_creditcard.dart';
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
 
+  //MAIN UI - ALL APP OPTIONS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,19 +16,30 @@ class HomePage extends StatelessWidget {
         title: const Text('Credit Card Submissions'),
         automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
+      body: SingleChildScrollView( //STOP OVERFLOW
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 50, 10, 30),
-              child: Text(
-                'Menu Options - Session: ' + sessionId.toString(),
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  // Customize the content text style if needed
-                ),
+              child: Column(
+                children: [
+                  Text(
+                    'Menu Options',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10), // Add some space between the lines
+                  Text(
+                    'Session: $sessionId for $userName',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
               ),
             ),
             Center(
@@ -105,7 +117,12 @@ class HomePage extends StatelessWidget {
                 height: 80,
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
                 child: ElevatedButton(
-                  onPressed: () { Navigator.pop(context); },
+                  onPressed: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MyApp()),
+                    );
+                  },
                   child: const Text("Logout"),
                 ),
               ),

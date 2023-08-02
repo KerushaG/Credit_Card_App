@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ml_card_scanner/ml_card_scanner.dart';
 import 'add_creditcard.dart';
 
+//DECLARE GLOBAL VARIABLE
 String? scannedCardNumber = "";
 
 class Scanning extends StatefulWidget {
@@ -13,31 +14,45 @@ class Scanning extends StatefulWidget {
 }
 
 class _ScanningState extends State<Scanning> {
-  CardInfo? _cardInfo;
-  final ScannerWidgetController _controller = ScannerWidgetController();
-  String cardNumber = "";
 
+  //DECLARE VARIABLES
+  CardInfo? _cardInfo;
+  String cardNumber = "";
+  bool showCamera = true;
+
+  //DECLARE USER INPUT OBJECTS
+  final ScannerWidgetController _controller = ScannerWidgetController();
+
+  //INITIAL SETUP OF THE WIDGET
   @override
   void initState() {
+    //CHECK FOR SCANNED CARD NUMBER, SAVE AND DISENABLE CAMERA
     _controller
       ..setCardListener((value) {
         setState(() {
           _cardInfo = value;
-          // Split the text into lines
-          List<String> lines = _cardInfo.toString().split('\n');
+          if (_cardInfo != null) {
 
-          // Get the second line (index 1) and third line (index 2) from the list
-          cardNumber = 'Card ' + lines[1];
+            //SPLIT THE CARD INFO IN LINES
+            List<String> lines = _cardInfo!.toString().split('\n');
 
-          //SAVE SCANNED CARD NUMBER
-          if(lines[1] != "" || lines[1] != null){
-            RegExp regex = RegExp(r'\d+');
-            Iterable<Match> matches = regex.allMatches(lines[1]);
-            scannedCardNumber = matches.map((match) => match.group(0)).join();
-          } else {
-            scannedCardNumber = ""; // If no card number is found, set it to an empty string or handle it as needed.
+            //GET THE CARD NUMBER LINE
+            cardNumber = 'Card ' + lines[1];
+
+            //SAVE SCANNED CARD NUMBER ONLY
+            if (lines[1].isNotEmpty) {
+              RegExp regex = RegExp(r'\d+');
+              Iterable<Match> matches = regex.allMatches(lines[1]);
+              scannedCardNumber = matches.map((match) => match.group(0)).join();
+              setState(() {
+                //DISENABLE CAMERA
+                showCamera = false;
+
+              });
+            } else {
+              scannedCardNumber = "";
+            }
           }
-
         });
       })
       ..setErrorListener((exception) {
@@ -48,22 +63,35 @@ class _ScanningState extends State<Scanning> {
     super.initState();
   }
 
+  //FUNCTIONS FOR THE WIDGET
+
+  //CLEAR SCANNED CARD NUMBER AND ENABLE CAMERA
+  void _resetScan() {
+    _cardInfo = null;
+    scannedCardNumber = "";
+    setState(() {
+      showCamera = true;
+    });
+  }
+
+  //MAIN UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Credit Card Submissions'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, //HIDE BACK BUTTON
       ),
       body: Center(
         child: Column(
           children: [
-            Expanded(
-              child: ScannerWidget(
-                controller: _controller,
-                overlayOrientation: CardOrientation.landscape,
+            if (showCamera) //SHOW CAMERA BASED ON BOOL
+              Expanded(
+                child: ScannerWidget(
+                  controller: _controller,
+                  overlayOrientation: CardOrientation.landscape,
+                ),
               ),
-            ),
             Container(
               width: MediaQuery.of(context).size.width,
               color: Colors.white,
@@ -72,20 +100,19 @@ class _ScanningState extends State<Scanning> {
                   const SizedBox(
                     height: 45,
                   ),
-
-                  Text(cardNumber.isNotEmpty ? cardNumber : 'No Card Details',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold, // Adjust the font weight as needed// Adjust the text color as needed
-                    // You can add more text styles here if needed, such as fontFamily, letterSpacing, etc.
-                  ),
+                  Text(
+                    cardNumber.isNotEmpty ? cardNumber : 'No Card Details',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(
                     height: 10,
                   ),
                   SizedBox(
-                    width: 350, // Add your desired width here
+                    width: 350,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.push(
@@ -99,7 +126,17 @@ class _ScanningState extends State<Scanning> {
                     ),
                   ),
                   SizedBox(
-                    width: 350, // Add your desired width here
+                    width: 350,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        //CLEAR AND ENABLE CAMERA
+                        _resetScan();
+                      },
+                      child: Text('Try Again'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 350,
                     child: ElevatedButton(
                       onPressed: () {
                         scannedCardNumber = "";
@@ -117,9 +154,9 @@ class _ScanningState extends State<Scanning> {
     );
   }
 
+  //DISPOSE ALL OBJECTS
   @override
   void dispose() {
-    // Clear or dispose of the variables here
     _controller.dispose();
     _cardInfo = null;
     super.dispose();
