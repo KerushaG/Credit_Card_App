@@ -1,10 +1,6 @@
 # credit_card_submitter
 
-A new Flutter project.
-
 ## Getting Started
-
-This project is a starting point for a Flutter application.
 
 This application offers:
 
